@@ -13,6 +13,6 @@ def mail_getter_looper():
 
 
 if __name__ == '__main__':
-    init_logger()
+    init_service()
     mail_getter_looper()
 

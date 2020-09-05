@@ -1,16 +1,25 @@
 from variables import *
 import pickle
 import os.path
+import os
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import base64
 import logging
 from datetime import datetime as dt
+import json
 
 logger = None
 LOGGING_LEVEL = logging.INFO
 gmail_service = None
+
+
+def init_service():
+    init_logger()
+    init_gmail_service()
+    if not os.path.exists(PDFS_PATH):
+        os.makedirs(PDFS_PATH)
 
 
 def init_logger():
@@ -33,6 +42,7 @@ def init_logger():
 
 def init_gmail_service():
     global gmail_service
+    creds = None
     if os.path.exists('token.pickle'):
         with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
@@ -40,8 +50,7 @@ def init_gmail_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                CREDENTIALS_JSON, SCOPES)
+            flow = InstalledAppFlow.from_client_config(json.loads(os.environ.get("gmail_credentials")), SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
