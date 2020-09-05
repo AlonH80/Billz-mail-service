@@ -51,7 +51,7 @@ def init_gmail_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_config(json.loads(os.environ.get("gmail_credentials")), SCOPES)
-            creds = flow.run_local_server(port=os.environ.get("PORT"))
+            creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
