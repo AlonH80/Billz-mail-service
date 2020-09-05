@@ -3,3 +3,4 @@ key_files
 *.json
 token.pickle
 .idea
+cred_configs
