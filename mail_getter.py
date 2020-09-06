@@ -25,7 +25,7 @@ def init_service():
 def init_logger():
     global logger
     if logger is None:
-        log_name = '{}.log'.format(dt.now().strftime("%y_%m_%d__%H_%M"))
+        log_name = '{}/{}.log'.format(LOGS_PATH, dt.now().strftime("%y_%m_%d__%H_%M"))
         logger = logging.getLogger(log_name)
         logger.setLevel(LOGGING_LEVEL)
         fh = logging.FileHandler(log_name)
@@ -50,8 +50,10 @@ def init_gmail_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_config(json.loads(os.environ.get("gmail_credentials")), SCOPES)
-            creds = flow.run_local_server(port=0)
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_JSON, SCOPES)
+            #flow = InstalledAppFlow.from_client_config(json.loads(os.environ.get("gmail_credentials")), SCOPES)
+            #creds = flow.run_local_server()
+            creds = flow.run_console()
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
