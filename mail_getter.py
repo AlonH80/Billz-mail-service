@@ -9,6 +9,8 @@ import base64
 import logging
 from datetime import datetime as dt
 import json
+from Engine.BillzOCR import try_process_file
+from mongoConnector import MongoConnector
 
 logger = None
 LOGGING_LEVEL = logging.INFO
@@ -66,6 +68,9 @@ class MailGetter:
         if gmail_service is None:
             init_gmail_service()
         self.msgs = []
+        self.files = []
+        self.files_senders = dict()
+        self.uid_mails = dict()
 
     def get_messages(self):
         msgs_lst = gmail_service.users().messages().list(userId='me').execute()
@@ -79,6 +84,7 @@ class MailGetter:
         )
 
     def get_files_from_msg(self, msg):
+        sender = msg["from"]
         msg_parts = msg.get("payload").get("parts")
         for part in msg_parts:
             if part['filename']:
@@ -94,10 +100,24 @@ class MailGetter:
                     with open(path, 'wb') as f:
                         f.write(file_data)
                         logger.info("Download file {}".format(part['filename']))
+                        self.files_senders[path] = sender
 
     def get_all_files_from_msgs(self):
         if self.msgs.__len__() == 0:
             self.get_messages()
         list(map(lambda m: self.get_files_from_msg(m), self.msgs))
 
+    def parse_files(self):
+        results = dict(map(lambda f: (f, try_process_file(f)), self.files))
+        success_parses = dict(filter(lambda kv: kv[1].__len__() > 0, results))
+        self.resolve_uid_mail()
+        list_map = list(map(lambda f: {"userID": self.uid_mails[self.files_senders[f]][0], "apartmentId": self.uid_mails[self.files_senders[f]][1], "msgType": "ocr_approve", "message": success_parses[f]}, success_parses.keys()))
+        mc = MongoConnector("messages")
+        mc.insert(list_map)
+
+    def resolve_uid_mail(self):
+        mc_users = MongoConnector("UsersAuth")
+        res_maps = list(map(lambda user_mail: mc_users.find({"email": user_mail}), self.files_senders.values()))
+        res_maps = list(filter(lambda r: r.items().__len__() > 0, res_maps))
+        list(map(lambda r: self.uid_mails.__setitem__(r["email"], (r["userID"], r["apartmentId"])), res_maps))
 

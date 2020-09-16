@@ -7,6 +7,7 @@ def mail_getter_looper():
     while True:
         try:
             mail_getter.get_all_files_from_msgs()
+            mail_getter.parse_files()
             sleep(GET_MAIL_DELAY)
         except Exception as e:
             logger.exception("Getting mail failed")
