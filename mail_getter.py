@@ -27,6 +27,8 @@ def init_service():
 def init_logger():
     global logger
     if logger is None:
+        if not os.path.exists(LOGS_PATH):
+            os.makedirs(LOGS_PATH)
         log_name = '{}/{}.log'.format(LOGS_PATH, dt.now().strftime("%y_%m_%d__%H_%M"))
         logger = logging.getLogger(log_name)
         logger.setLevel(LOGGING_LEVEL)
@@ -41,6 +43,11 @@ def init_logger():
         logger.addHandler(ch)
         logger.info("Logger initialized")
 
+
+def get_logger():
+    if logger is None:
+        init_logger()
+    return logger
 
 def init_gmail_service():
     global gmail_service
@@ -118,6 +125,7 @@ class MailGetter:
         list_map = list(map(lambda f: {"userID": self.uid_mails[self.files_senders[f]][0], "apartmentId": self.uid_mails[self.files_senders[f]][1], "msgType": "ocr_approve", "message": success_parses[f]}, success_parses.keys()))
         mc = MongoConnector("messages")
         mc.insert(list_map)
+        list(map(lambda path: self.files_senders.pop(path), self.files_senders.keys()))
 
     def resolve_uid_mail(self):
         mc_users = MongoConnector("UsersAuth")
