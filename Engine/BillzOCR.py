@@ -253,9 +253,9 @@ def try_process_file(file_path):
         parse_id = generate_id_for_pending_queue()
         res = process_file(file_path, parse_id)
     except Exception as e:
-        print("Unable to parse {}".format(file_path))
-        traceback.print_tb()
-        res = ""
+         print("Unable to parse {}".format(file_path))
+         #traceback.print_tb()
+         res = ""
     return res
 
 if __name__ == '__main__':

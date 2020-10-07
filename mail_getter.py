@@ -84,7 +84,8 @@ class MailGetter:
         )
 
     def get_files_from_msg(self, msg):
-        sender = msg["from"]
+        sender = list(filter(lambda x: x["name"]=="From", msg["payload"]["headers"]))[0]["value"]
+        sender = sender[sender.index("<") + 1:sender.index(">")]
         msg_parts = msg.get("payload").get("parts")
         for part in msg_parts:
             if part['filename']:
@@ -95,7 +96,10 @@ class MailGetter:
                     att = gmail_service.users().messages().attachments().get(userId="me", messageId=msg["id"], id=att_id).execute()
                     data = att['data']
                 file_data = base64.urlsafe_b64decode(data.encode('UTF-8'))
-                path = "{}/{}".format(PDFS_PATH, part['filename'])
+                directory = "{}/{}".format(PDFS_PATH, sender)
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                path = "{}/{}".format(directory, part['filename'])
                 if not os.path.exists(path):
                     with open(path, 'wb') as f:
                         f.write(file_data)
@@ -108,8 +112,8 @@ class MailGetter:
         list(map(lambda m: self.get_files_from_msg(m), self.msgs))
 
     def parse_files(self):
-        results = dict(map(lambda f: (f, try_process_file(f)), self.files))
-        success_parses = dict(filter(lambda kv: kv[1].__len__() > 0, results))
+        results = dict(map(lambda f: (f, try_process_file(f)), self.files_senders.keys()))
+        success_parses = dict(filter(lambda kv: kv[1].__len__() > 0, results.items()))
         self.resolve_uid_mail()
         list_map = list(map(lambda f: {"userID": self.uid_mails[self.files_senders[f]][0], "apartmentId": self.uid_mails[self.files_senders[f]][1], "msgType": "ocr_approve", "message": success_parses[f]}, success_parses.keys()))
         mc = MongoConnector("messages")
@@ -117,7 +121,7 @@ class MailGetter:
 
     def resolve_uid_mail(self):
         mc_users = MongoConnector("UsersAuth")
-        res_maps = list(map(lambda user_mail: mc_users.find({"email": user_mail}), self.files_senders.values()))
+        res_maps = list(map(lambda user_mail: mc_users.find({"email": user_mail})[0], self.files_senders.values()))
         res_maps = list(filter(lambda r: r.items().__len__() > 0, res_maps))
         list(map(lambda r: self.uid_mails.__setitem__(r["email"], (r["userID"], r["apartmentId"])), res_maps))
 
